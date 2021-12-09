@@ -12,11 +12,11 @@ else:
 if speed>=car_simulation.get('speed_limit'):
     st.write('即將超速')
 else:
-    print('安全')
+    st.write('安全')
 if temp>=car_simulation.get('temp_warning'):
     st.write('過熱')
 else:
-    print('正常')
+   st.write('正常')
 if 轉速>=car_simulation.get('轉速'):
      st.write('即將超過轉速')
 else:
