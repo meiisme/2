@@ -1,92 +1,196 @@
+from PyQt5.QtWidgets import QWidget, QLabel
+from PyQt5.QtCore import QTimer, Qt
+import random
 
+class Point:
+    pass
 
-'''組態檔'''
-import os
+bonus = Point()
+GAME_ROW = 20
+GAME_COL = 20
+GRID_WIDTH = 20
+GRID_HEIGHT = 20
+SNAKE_INIT_ROW = 10
+SNAKE_INIT_LEMGTH = 5
+SNAKE_Q_LENGTH = GAME_ROW * GAME_COL + 100
+SNAKE_COLOR =      "background-color:#ffffff;"
+SNAKE_HEAD_COLOR = "background-color:#ffff00;"
+BONUS_COLOR      = "background-color:#ff0000;"
+BG_COLOR =         "background-color:#000000;"
+snake_head = SNAKE_INIT_LEMGTH - 1 
+snake_tail = 0
+SNAKE_ADD_LENGTH = 5
+snake_move = 1
 
+class myWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        
+    def keyPressEvent(self, event):
+        global snake_dir        
+        if event.key() == Qt.Key_Up:
+            if snake_dir != 2:
+               snake_dir = 1
+        
+        if event.key() == Qt.Key_Down:
+            if snake_dir != 1:
+               snake_dir = 2
+        
+        if event.key() == Qt.Key_Left:
+            if snake_dir != 4:
+               snake_dir = 3
+    
+        if event.key() == Qt.Key_Right:
+            if snake_dir != 3:
+               snake_dir = 4
+    
+window = myWindow()
 
-'''螢幕大小'''
-SCREENSIZE = (800, 625)
-'''遊戲素材'''
-BGMPATH = os.path.join(os.getcwd(), 'resources/audios/bgm.mp3')
-HEROPICPATH = os.path.join(os.getcwd(), 'resources/images/hero.png')
-'''FPS'''
-FPS = 20
-'''塊大小'''
-BLOCKSIZE = 15
-MAZESIZE = (35, 50) # num_rows * num_cols
-BORDERSIZE = (25, 50) # 25 * 2 + 50 * 15 = 800, 50 * 2 + 35 * 15 = 625
-
-
-
-'''主函數'''
-def main(cfg):
-    # 初始化
-    pygame.init()
-    pygame.mixer.init()
-    pygame.font.init()
-    pygame.mixer.music.load(cfg.BGMPATH)
-    pygame.mixer.music.play(-1, 0.0)
-    screen = pygame.display.set_mode(cfg.SCREENSIZE)
-    pygame.display.set_caption('Maze —— 九歌')
-    font = pygame.font.SysFont('Consolas', 15)
-    # 開始介面
-    Interface(screen, cfg, 'game_start')
-    # 記錄關卡數
-    num_levels = 0
-    # 記錄最少用了多少步通關
-    best_scores = 'None'
-    # 關卡迴圈切換
+def inside_snake(mode, x, y):
+    #print('inside_snake():')
+    global snake_q, snake_head, snake_tail, SNAKE_Q_LENGTH
+    s = snake_head 
+    e = snake_tail    
+    if mode == 1:
+        if x == snake_q[s].x and y == snake_q[s].y:
+            #print('inside_snake(1)')
+            return True
+            
     while True:
-        num_levels += 1
-        clock = pygame.time.Clock()
-        screen = pygame.display.set_mode(cfg.SCREENSIZE)
-        # --隨機生成關卡地圖
-        maze_now = RandomMaze(cfg.MAZESIZE, cfg.BLOCKSIZE, cfg.BORDERSIZE)
-        # --生成hero
-        hero_now = Hero(cfg.HEROPICPATH, [0, 0], cfg.BLOCKSIZE, cfg.BORDERSIZE)
-        # --統計步數
-        num_steps = 0
-        # --關卡內主迴圈
-        while True:
-            dt = clock.tick(cfg.FPS)
-            screen.fill((255, 255, 255))
-            is_move = False
-            # ----↑↓←→控制hero
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit(-1)
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_UP:
-                        is_move = hero_now.move('up', maze_now)
-                    elif event.key == pygame.K_DOWN:
-                        is_move = hero_now.move('down', maze_now)
-                    elif event.key == pygame.K_LEFT:
-                        is_move = hero_now.move('left', maze_now)
-                    elif event.key == pygame.K_RIGHT:
-                        is_move = hero_now.move('right', maze_now)
-            num_steps += int(is_move)
-            hero_now.draw(screen)
-            maze_now.draw(screen)
-            # ----顯示一些資訊
-            showText(screen, font, 'LEVELDONE: %d' % num_levels, (255, 0, 0), (10, 10))
-            showText(screen, font, 'BESTSCORE: %s' % best_scores, (255, 0, 0), (210, 10))
-            showText(screen, font, 'USEDSTEPS: %s' % num_steps, (255, 0, 0), (410, 10))
-            showText(screen, font, 'S: your starting point    D: your destination', (255, 0, 0), (10, 600))
-            # ----判斷遊戲是否勝利
-            if (hero_now.coordinate[0] == cfg.MAZESIZE[1] - 1) and (hero_now.coordinate[1] == cfg.MAZESIZE[0] - 1):
-                break
-            pygame.display.update()
-        # --更新最優成績
-        if best_scores == 'None':
-            best_scores = num_steps
-        else:
-            if best_scores > num_steps:
-                best_scores = num_steps
-        # --關卡切換
-        Interface(screen, cfg, mode='game_switch')
+        s -= 1
+        if s == -1:
+            s = SNAKE_Q_LENGTH - 1
+        if x == snake_q[s].x and y == snake_q[s].y:
+            #print('inside_snake(0)')
+            return True
 
+        if s == e:
+            break            
 
-'''run'''
-if __name__ == '__main__':
-    main(cfg)
+    return False
+
+def new_bonus():
+    global bonus, grids, GAME_COL, GAME_ROW, BONUS_COLOR
+    while True:
+        bonus.x = random.randint(0, GAME_COL-1)
+        bonus.y = random.randint(0, GAME_ROW-1)
+        if not inside_snake(1, bonus.x, bonus.y):
+            break
+    #print('new_bonus():', bonus.x, bonus.y) 
+    grids[bonus.y][bonus.x].setStyleSheet(BONUS_COLOR)
+   
+def game_init():
+    global GAME_ROW, GAME_COL, grids, BG_COLOR, SNAKE_INIT_LEMGTH, snake_q, snake_head, snake_tail, snake_dir, game_mode, snake_move, score
+    for i in range(GAME_ROW):
+        for j in range(GAME_COL):
+            grids[i][j].setStyleSheet(BG_COLOR)    
+
+    for i in range(SNAKE_INIT_LEMGTH):
+        snake_q[i].y = SNAKE_INIT_ROW; 
+        snake_q[i].x = i;
+        grids[SNAKE_INIT_ROW][i].setStyleSheet(SNAKE_COLOR)        
+    snake_head = SNAKE_INIT_LEMGTH - 1
+    snake_tail = 0;
+    grids[snake_q[snake_head].y][snake_q[snake_head].x].setStyleSheet(SNAKE_HEAD_COLOR)
+
+    while True:
+        snake_dir = random.randint(1, 4)
+        if snake_dir != 3:
+            break
+    game_mode = 1 
+    snake_move = 1 
+    score = 0
+    new_bonus()    
+#---------------------------------  main program ----------------------------------------------
+grids = []
+for y in range(GAME_COL):
+    g_row=[] #for 1 row only
+    for x in range(GAME_ROW):
+        g = QLabel(window)
+        g.setStyleSheet(BG_COLOR) #set all grids with black color
+        g.setFixedSize(GRID_WIDTH, GRID_HEIGHT)
+        g.move(GRID_WIDTH*x, GRID_HEIGHT*y)
+        g_row.append(g)        
+    
+    grids.append(g_row) #create 2-D array of grids
+
+snake_q = []
+for i in range(SNAKE_Q_LENGTH):
+    p = Point()
+    snake_q.append(p)
+    
+for i in range(SNAKE_INIT_LEMGTH):
+    p = Point()
+    p.y = SNAKE_INIT_ROW
+    p.x = i
+    snake_q[i] = p 
+    grids[SNAKE_INIT_ROW][i].setStyleSheet(SNAKE_COLOR)                
+grids[snake_q[snake_head].y][snake_q[snake_head].x].setStyleSheet(SNAKE_HEAD_COLOR)
+
+while True:
+    snake_dir = random.randint(1, 4)
+    if snake_dir != 3:
+        break
+game_mode = 1
+snake_move = 1 
+score = 0
+new_bonus()
+timer = QTimer(window)  
+
+def timer_tick():
+    global snake_q, snake_head, SNAKE_Q_LENGTH, GAME_ROW, GAME_COL, timer, SNAKE_ADD_LENGTH, snake_move, score, snake_tail, BONUS_COLOR
+    #print('snake_q len=', len(snake_q), 'snake_head=', snake_head)
+    y = snake_q[snake_head].y
+    x = snake_q[snake_head].x
+    snake_head += 1
+    if snake_head == SNAKE_Q_LENGTH:
+        snake_head = 0    
+    snake_q[snake_head].y = y 
+    snake_q[snake_head].x = x
+
+    if snake_dir == 1:
+        snake_q[snake_head].y -= 1
+        if snake_q[snake_head].y < 0:
+            snake_q[snake_head].y = GAME_ROW - 1    
+
+    if snake_dir == 2:
+        snake_q[snake_head].y += 1
+        if snake_q[snake_head].y >= GAME_ROW:
+            snake_q[snake_head].y = 0    
+
+    if snake_dir == 3:
+        snake_q[snake_head].x -= 1
+        if snake_q[snake_head].x < 0:
+            snake_q[snake_head].x = GAME_COL - 1    
+
+    if snake_dir == 4:
+        snake_q[snake_head].x += 1
+        if snake_q[snake_head].x >= GAME_COL:
+            snake_q[snake_head].x = 0
+     
+    grids[snake_q[snake_head].y][snake_q[snake_head].x].setStyleSheet(SNAKE_HEAD_COLOR)
+    grids[y][x].setStyleSheet(SNAKE_COLOR)        
+    if inside_snake(1, bonus.x, bonus.y):
+        new_bonus()
+        snake_move += SNAKE_ADD_LENGTH
+        score += 100     
+        print('score=', score)
+
+    if inside_snake(0, snake_q[snake_head].x, snake_q[snake_head].y):
+        print('game over')
+        timer.stop()        
+        game_init()
+        timer.start()
+        return     
+
+    if snake_move == 1:
+        grids[snake_q[snake_tail].y][snake_q[snake_tail].x].setStyleSheet(BG_COLOR)
+        snake_tail += 1
+        if snake_tail == SNAKE_Q_LENGTH:
+            snake_tail = 0
+    else:
+        snake_move -= 1
+        
+window.show()
+timer.timeout.connect(timer_tick)
+timer.start(200)
